@@ -18,10 +18,32 @@ SCENE_FILE = join(dirname(abspath(__file__)),
                   'B1_4_4.ttt')
 POS_MIN, POS_MAX = [0.8, -0.2, 1.0], [1.0, 0.2, 1.4]
 EPISODES = 1
-EPISODE_LENGTH = 10
+EPISODE_LENGTH = 300
 
 # Multi Process
-PROCESSES = 2
+PROCESSES = 1
+
+def euler_from_quaternion(x, y, z, w):
+        """
+        Convert a quaternion into euler angles (roll, pitch, yaw)
+        roll is rotation around x in radians (counterclockwise)
+        pitch is rotation around y in radians (counterclockwise)
+        yaw is rotation around z in radians (counterclockwise)
+        """
+        t0 = +2.0 * (w * x + y * z)
+        t1 = +1.0 - 2.0 * (x * x + y * y)
+        roll_x = np.arctan2(t0, t1)
+     
+        t2 = +2.0 * (w * y - z * x)
+        t2 = +1.0 if t2 > +1.0 else t2
+        t2 = -1.0 if t2 < -1.0 else t2
+        pitch_y = np.arcsin(t2)
+
+        t3 = +2.0 * (w * z + x * y)
+        t4 = +1.0 - 2.0 * (y * y + z * z)
+        yaw_z = np.arctan2(t3, t4)
+     
+        return [roll_x, pitch_y, yaw_z] # in radians
 
 class B1Env(object):
 
@@ -30,6 +52,7 @@ class B1Env(object):
         self.pr.launch(SCENE_FILE, headless=True)
         self.pr.start()
         self.agent = B1()
+        self.orientation = self.get_robot_euler()
         # self.agent.set_control_loop_enabled(False)
         # self.agent.set_motor_locked_at_zero_velocity(True)
         # self.body = self.agent.get_handle('B1')
@@ -39,8 +62,18 @@ class B1Env(object):
     def _get_state(self):
         # Return state containing arm joint angles/velocities & target position
         return np.concatenate([self.agent.get_joint_positions(),
-                               self.agent.get_joint_velocities()])
-                              #  self.target.get_position()])
+                               self.agent.get_joint_forces(),
+                               self.get_robot_euler()])
+
+    def get_robot_position(self):
+        return self.agent.get_position()
+
+    def get_robot_euler(self):
+        # get quaternion of the robot (q)
+        # Then tranfrom quaternion-->euler and return euler orientation  
+        q = self.agent.get_quaternion()
+        robot_euler = euler_from_quaternion(q[0], q[1], q[2], q[3])
+        return robot_euler
 
     def reset(self):
         # Get a random position within a cuboid and set the target position
@@ -104,6 +137,7 @@ def run():
 processes = [Process(target=run, args=()) for i in range(PROCESSES)]
 [p.start() for p in processes]
 [p.join() for p in processes]
+
 
 
 #     # CPG

@@ -38,9 +38,9 @@ class LeggedRobotComponent(Object):
             for j in joint_name:
                 s = i+j
                 self._joint_names.append(s)
-        self.leg_joints = [Joint(_leg_joint_name)
+        self.joints = [Joint(_leg_joint_name)
                             for _leg_joint_name in self._joint_names]
-        self._leg_joints_handles = [_leg_joints.get_handle() for _leg_joints in self.leg_joints]
+        self._joint_handles = [_leg_joints.get_handle() for _leg_joints in self.joints]
         '''
         suffix = '' if count == 0 else '#%d' % (count - 1)
         super().__init__(
